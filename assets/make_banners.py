@@ -8,21 +8,44 @@ and bump IMAGES_VERSION in services/digest.py: Telegram caches previews by URL.
 """
 import argparse
 import math
+from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).resolve().parent
 WIDTH, HEIGHT = 1280, 640
-BACKGROUND = (13, 17, 23)
-TEXT = (240, 246, 252)
-MUTED = (139, 148, 158)
 CHANNEL = "@GitHubMZTop"
 
+Color = tuple[int, int, int]
+
+
+def hex_color(value: str) -> Color:
+    value = value.lstrip("#")
+    return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def mix(a: Color, b: Color, share: float) -> Color:
+    """a with share of b blended in."""
+    return tuple(round(x + (y - x) * share) for x, y in zip(a, b))
+
+
+@dataclass(frozen=True)
+class Palette:
+    background: Color  # the dark color of the palette
+    text: Color  # the light one: "ТОП-10", the channel, the inner star
+    accent: Color  # the bright one: the period word, the star, the hashtag
+
+    @property
+    def muted(self) -> Color:
+        return mix(self.background, self.text, 0.6)
+
+
+# One three-color palette per period
 BANNERS = {
-    "day": ("ДНЯ", (63, 185, 80)),
-    "week": ("ТИЖНЯ", (88, 166, 255)),
-    "month": ("МІСЯЦЯ", (210, 168, 255)),
+    "day": ("ДНЯ", Palette(hex_color("#49022D"), hex_color("#E4DD95"), hex_color("#F7AF05"))),  # Mulberry, Buttercream, Marigold
+    "week": ("ТИЖНЯ", Palette(hex_color("#273E49"), hex_color("#FEE1AF"), hex_color("#A76020"))),  # Slate Blue, Cream, Copper Brown
+    "month": ("МІСЯЦЯ", Palette(hex_color("#091B27"), hex_color("#A3AFA5"), hex_color("#D5393A"))),  # Midnight Navy, Sage Mist, Vermilion
 }
 
 # Fonts with Cyrillic: Windows, then Debian (fonts-dejavu)
@@ -46,33 +69,34 @@ def star(cx: float, cy: float, outer: float, inner: float) -> list[tuple[float, 
     return points
 
 
-def draw(key: str, word: str, accent: tuple[int, int, int], channel: str, bold: str, regular: str) -> Image.Image:
-    image = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
+def draw(key: str, word: str, palette: Palette, channel: str, bold: str, regular: str) -> Image.Image:
+    accent, text, muted = palette.accent, palette.text, palette.muted
 
-    # Soft glow behind the star
-    glow = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
-    ImageDraw.Draw(glow).ellipse((760, 80, 1240, 560), fill=tuple(c // 3 for c in accent))
-    image = Image.blend(image, glow.filter(ImageFilter.GaussianBlur(120)), 1.0)
+    # Soft glow of the accent behind the star
+    glow = Image.new("RGB", (WIDTH, HEIGHT), palette.background)
+    ImageDraw.Draw(glow).ellipse((760, 80, 1240, 560), fill=mix(palette.background, accent, 0.45))
+    image = glow.filter(ImageFilter.GaussianBlur(120))
     canvas = ImageDraw.Draw(image)
 
     # Dot grid
+    dot = mix(palette.background, text, 0.12)
     for x in range(40, WIDTH, 40):
         for y in range(40, HEIGHT, 40):
-            canvas.ellipse((x - 1, y - 1, x + 1, y + 1), fill=(33, 38, 45))
+            canvas.ellipse((x - 1, y - 1, x + 1, y + 1), fill=dot)
 
     canvas.polygon(star(1000, 320, 190, 78), fill=accent)
-    canvas.polygon(star(1000, 320, 150, 62), fill=BACKGROUND)
-    canvas.polygon(star(1000, 320, 110, 45), fill=accent)
+    canvas.polygon(star(1000, 320, 150, 62), fill=palette.background)
+    canvas.polygon(star(1000, 320, 110, 45), fill=text)
 
     small = ImageFont.truetype(bold, 30)
     huge = ImageFont.truetype(bold, 170)
     big = ImageFont.truetype(bold, 120)
     regular_font = ImageFont.truetype(regular, 36)
 
-    canvas.text((80, 70), "G I T H U B   T R E N D I N G", font=small, fill=MUTED)
-    canvas.text((72, 110), "ТОП-10", font=huge, fill=TEXT)
+    canvas.text((80, 70), "G I T H U B   T R E N D I N G", font=small, fill=muted)
+    canvas.text((72, 110), "ТОП-10", font=huge, fill=text)
     canvas.text((76, 290), word, font=big, fill=accent)
-    canvas.text((80, 462), "найпопулярніші репозиторії GitHub", font=regular_font, fill=MUTED)
+    canvas.text((80, 462), "найпопулярніші репозиторії GitHub", font=regular_font, fill=muted)
 
     hashtag = f"#{key}"
     left, top, right, bottom = canvas.textbbox((0, 0), hashtag, font=small)
@@ -82,7 +106,7 @@ def draw(key: str, word: str, accent: tuple[int, int, int], channel: str, bold: 
     # Channel name centred under the star, on the line of the hashtag
     channel_font = ImageFont.truetype(bold, 40)
     left, top, right, bottom = canvas.textbbox((0, 0), channel, font=channel_font)
-    canvas.text((1000 - (right - left) / 2 - left, 560 - (bottom - top) / 2 - top), channel, font=channel_font, fill=TEXT)
+    canvas.text((1000 - (right - left) / 2 - left, 560 - (bottom - top) / 2 - top), channel, font=channel_font, fill=text)
     return image
 
 
@@ -94,9 +118,9 @@ def main() -> None:
     args = parser.parse_args()
     bold = args.bold or find_font(BOLD_FONTS)
     regular = args.regular or find_font(REGULAR_FONTS)
-    for key, (word, accent) in BANNERS.items():
+    for key, (word, palette) in BANNERS.items():
         path = HERE / f"{key}.png"
-        draw(key, word, accent, args.channel, bold, regular).save(path, optimize=True)
+        draw(key, word, palette, args.channel, bold, regular).save(path, optimize=True)
         print(path)
 
 

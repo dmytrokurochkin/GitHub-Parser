@@ -30,7 +30,7 @@ TICK = 30
 RETRY_AFTER = timedelta(minutes=15)
 # Telegram caches link previews by URL, so a redrawn header under the same file
 # name would keep showing the old picture: bump this whenever assets/*.png change
-IMAGES_VERSION = 2
+IMAGES_VERSION = 3
 
 
 class NoTop(RuntimeError):
