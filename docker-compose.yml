@@ -1,0 +1,16 @@
+services:
+  bot:
+    build: .
+    container_name: github-parser-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    # A directory, not a single bot.db: a missing file would be created by Docker
+    # as a directory, and SQLite also keeps -wal/-shm files next to the database
+    volumes:
+      - ./data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
