@@ -1,6 +1,7 @@
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramRetryAfter
 from aiogram.methods import SendMessage
 
+from services.digest import IMAGES_VERSION
 from tests.conftest import at, repo
 
 METHOD = SendMessage(chat_id=1, text="x")
@@ -17,7 +18,7 @@ async def test_due_post_goes_out_once(make_service, publisher):
     # Friday 30.10 06:01: only the daily top is due
     assert hashtags(publisher) == ["#day"]
     text, image = publisher.posts[0]
-    assert image == "https://img.example/day.png"
+    assert image == f"https://img.example/day.png?v={IMAGES_VERSION}"
     assert "📅 30.10.2026" in text
     run = await service.db.get_run("day:2026-10-30")
     assert run.status == "posted" and run.message_id == 101
@@ -52,7 +53,7 @@ async def test_sunday_the_first_posts_all_three_in_order(make_service, publisher
     await make_service().run_due()
     assert hashtags(publisher) == ["#day", "#week", "#month"]
     assert [image for _, image in publisher.posts] == [
-        "https://img.example/day.png", "https://img.example/week.png", "https://img.example/month.png",
+        f"https://img.example/{key}.png?v={IMAGES_VERSION}" for key in ("day", "week", "month")
     ]
     assert "📅 Жовтень 2026" in publisher.posts[2][0]
 

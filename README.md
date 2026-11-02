@@ -87,7 +87,7 @@ cp .env.example .env                             # заповнити
 .venv/bin/python -m pytest
 ```
 
-Картинки-шапки перемалювати: `python assets/make_banners.py`. Або поклади свої 1280×640 з тими самими назвами `assets/day.png`, `week.png`, `month.png`.
+Картинки-шапки перемалювати: `python assets/make_banners.py` (назва каналу на них: `--channel @name`, типово `@GitHubMZTop`). Або поклади свої 1280×640 з тими самими назвами `assets/day.png`, `week.png`, `month.png`. Після заміни збільш `IMAGES_VERSION` у `services/digest.py`: Telegram кешує прев'ю за адресою і без цього показував би старі картинки.
 
 ## Ліцензія
 

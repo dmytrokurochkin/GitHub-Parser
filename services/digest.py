@@ -28,6 +28,9 @@ REFUSED = (TelegramBadRequest, TelegramForbiddenError, TelegramUnauthorizedError
 # Seconds between schedule checks; a check is one SQLite read per period
 TICK = 30
 RETRY_AFTER = timedelta(minutes=15)
+# Telegram caches link previews by URL, so a redrawn header under the same file
+# name would keep showing the old picture: bump this whenever assets/*.png change
+IMAGES_VERSION = 2
 
 
 class NoTop(RuntimeError):
@@ -94,7 +97,7 @@ class DigestService:
         return self.clock().astimezone(self.tz)
 
     def image_url(self, key: str) -> str:
-        return f"{self.images_url}/{key}.png" if self.images_url else ""
+        return f"{self.images_url}/{key}.png?v={IMAGES_VERSION}" if self.images_url else ""
 
     async def paused(self) -> bool:
         return await self.db.get_setting("paused") == "1"

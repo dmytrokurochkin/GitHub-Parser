@@ -1,9 +1,10 @@
 """Draws the header images day.png, week.png and month.png next to this file.
 
-    python assets/make_banners.py [--bold FONT.ttf] [--regular FONT.ttf]
+    python assets/make_banners.py [--channel @name] [--bold FONT.ttf] [--regular FONT.ttf]
 
 The bot does not run this: the PNGs are committed and Telegram downloads them
-from IMAGES_URL. Replace them with your own under the same names if you like.
+from IMAGES_URL. Replace them with your own under the same names if you like,
+and bump IMAGES_VERSION in services/digest.py: Telegram caches previews by URL.
 """
 import argparse
 import math
@@ -16,6 +17,7 @@ WIDTH, HEIGHT = 1280, 640
 BACKGROUND = (13, 17, 23)
 TEXT = (240, 246, 252)
 MUTED = (139, 148, 158)
+CHANNEL = "@GitHubMZTop"
 
 BANNERS = {
     "day": ("ДНЯ", (63, 185, 80)),
@@ -44,7 +46,7 @@ def star(cx: float, cy: float, outer: float, inner: float) -> list[tuple[float, 
     return points
 
 
-def draw(key: str, word: str, accent: tuple[int, int, int], bold: str, regular: str) -> Image.Image:
+def draw(key: str, word: str, accent: tuple[int, int, int], channel: str, bold: str, regular: str) -> Image.Image:
     image = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
 
     # Soft glow behind the star
@@ -76,11 +78,17 @@ def draw(key: str, word: str, accent: tuple[int, int, int], bold: str, regular: 
     left, top, right, bottom = canvas.textbbox((0, 0), hashtag, font=small)
     canvas.rounded_rectangle((80, 535, 80 + right - left + 40, 535 + bottom - top + 28), radius=24, outline=accent, width=3)
     canvas.text((100 - left, 549 - top), hashtag, font=small, fill=accent)
+
+    # Channel name centred under the star, on the line of the hashtag
+    channel_font = ImageFont.truetype(bold, 40)
+    left, top, right, bottom = canvas.textbbox((0, 0), channel, font=channel_font)
+    canvas.text((1000 - (right - left) / 2 - left, 560 - (bottom - top) / 2 - top), channel, font=channel_font, fill=TEXT)
     return image
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--channel", default=CHANNEL)
     parser.add_argument("--bold", default=None)
     parser.add_argument("--regular", default=None)
     args = parser.parse_args()
@@ -88,7 +96,7 @@ def main() -> None:
     regular = args.regular or find_font(REGULAR_FONTS)
     for key, (word, accent) in BANNERS.items():
         path = HERE / f"{key}.png"
-        draw(key, word, accent, bold, regular).save(path, optimize=True)
+        draw(key, word, accent, args.channel, bold, regular).save(path, optimize=True)
         print(path)
 
 
