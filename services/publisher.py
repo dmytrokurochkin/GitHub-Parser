@@ -15,10 +15,14 @@ def preview_options(image_url: str) -> LinkPreviewOptions:
     descriptions need about twice that. A link preview of an image URL gives
     the same picture on top of a normal 4096-character message. The URL does
     not have to be in the text itself.
+
+    is_disabled=False must be explicit: every field left out takes the bot's
+    default, and create_bot() disables previews, so without it Telegram got
+    the image URL together with "is_disabled": true and showed plain text.
     """
     if not image_url:
         return LinkPreviewOptions(is_disabled=True)
-    return LinkPreviewOptions(url=image_url, prefer_large_media=True, show_above_text=True)
+    return LinkPreviewOptions(is_disabled=False, url=image_url, prefer_large_media=True, show_above_text=True)
 
 
 class Publisher:
