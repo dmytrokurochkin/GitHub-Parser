@@ -24,6 +24,7 @@ HELP = (
     "Бот сам публікує топ-10 репозиторіїв GitHub у канал за розкладом.\n\n"
     "/status: останні пости і коли наступні\n"
     "/preview day|week|month: показати пост тут, у канал нічого не йде\n"
+    "/test: надіслати сюди всі три пости (день, тиждень, місяць)\n"
     "/post day|week|month: опублікувати в канал зараз\n"
     "/pause: зупинити публікації за розкладом\n"
     "/resume: відновити публікації"
@@ -33,6 +34,20 @@ HELP = (
 def _period(command: CommandObject) -> str | None:
     arg = (command.args or "day").strip().lower()
     return ALIASES.get(arg)
+
+
+async def _send_preview(message: Message, service: DigestService, key: str) -> bool:
+    """Builds the post of the period and sends it to the admin chat; False when it failed."""
+    hashtag = PERIODS[key].hashtag
+    try:
+        digest = await service.build(key)
+        await service.publisher.preview(digest.text, service.image_url(key))
+    except Exception as exc:
+        await message.answer(f"❌ {hashtag}: не вийшло: {html.escape(redact(str(exc)))}")
+        return False
+    if digest.source == "search":
+        await message.answer(f"ℹ️ {hashtag}: сторінка trending не віддала репозиторіїв, топ зібрано з пошуку GitHub.")
+    return True
 
 
 @admin_router.message(Command("start", "help"))
@@ -65,14 +80,21 @@ async def cmd_preview(message: Message, command: CommandObject, service: DigestS
         await message.answer("Період: day, week або month.")
         return
     await message.answer("⏳ Збираю топ, це може зайняти хвилину.")
-    try:
-        digest = await service.build(key)
-        await service.publisher.preview(digest.text, service.image_url(key))
-    except Exception as exc:
-        await message.answer(f"❌ Не вийшло: {html.escape(redact(str(exc)))}")
-        return
-    if digest.source == "search":
-        await message.answer("ℹ️ Сторінка trending не віддала репозиторіїв, топ зібрано з пошуку GitHub.")
+    await _send_preview(message, service, key)
+
+
+@admin_router.message(Command("test"))
+async def cmd_test(message: Message, service: DigestService) -> None:
+    # The same posts the schedule would publish, but in this chat: nothing is
+    # recorded, so the channel's 🆕/🔁 marks and the schedule are untouched
+    await message.answer("⏳ Збираю всі три пости (день, тиждень, місяць) і надішлю сюди. У канал нічого не йде.")
+    done = 0
+    for key in ORDER:
+        done += await _send_preview(message, service, key)
+    if done == len(ORDER):
+        await message.answer(f"✅ Тест завершено: усі {done} пости зібрано.")
+    else:
+        await message.answer(f"⚠️ Тест завершено: зібрано {done} з {len(ORDER)}, помилки вище.")
 
 
 @admin_router.message(Command("post"))

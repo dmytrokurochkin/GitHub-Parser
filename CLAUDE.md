@@ -32,7 +32,7 @@ services/llm.py         # Describer: опис українською, кеш, з
 services/formatter.py   # build_post()/fit_post(): текст посту в межах 4096 символів
 services/publisher.py   # Publisher: пост у канал з картинкою як прев'ю, повідомлення адміну
 services/digest.py      # DigestService: розклад, догонка, захист від дублів, повтори, алерти
-handlers/admin.py       # admin_router: /status /preview /post /pause /resume
+handlers/admin.py       # admin_router: /status /preview /test /post /pause /resume
 assets/                 # day.png week.png month.png + make_banners.py (Pillow, лише для розробника)
 tests/                  # pytest; fixtures/ — справжні сторінки trending (обрізані)
 Dockerfile, docker-compose.yml, deploy.sh
@@ -100,6 +100,6 @@ Dockerfile, docker-compose.yml, deploy.sh
 - Нова логіка разом з тестом у `tests/`. Перед комітом: `python -m pytest` (усе має пройти). `bash -n deploy.sh`, і `shellcheck deploy.sh`, якщо він є.
 - Сервісам потрібні лише методи `GitHubClient`/`Publisher`; тести підставляють `FakeGitHub`/`FakePublisher` з `tests/conftest.py`, час через `Clock`. Нових прихованих звернень до мережі в `DigestService` не додавати.
 - API aiogram перевіряти по встановленому пакету (`.venv/Lib/site-packages/aiogram`), а не з пам'яті.
-- Не запускати бота з реальним токеном і реальним каналом для перевірок. Для перевірки збирання посту є `/preview`.
+- Не запускати бота з реальним токеном і реальним каналом для перевірок. Для перевірки збирання посту є `/preview` (один період) і `/test` (усі три). Обидві команди лише будують пост через `build()` і нічого не записують у `runs`/`appearances`, тому розклад і позначки 🆕/🔁 в каналі вони не змінюють (описи LLM при цьому кешуються).
 - Секрети не логувати: нові токени реєструвати в `add_secret()` у `main.setup_logging()`.
 - Коміти: Conventional Commits, тема англійською; без трейлерів співавторства і згадок AI.

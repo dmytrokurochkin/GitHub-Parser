@@ -1,6 +1,6 @@
 from aiogram.filters import CommandObject
 
-from handlers.admin import cmd_pause, cmd_post, cmd_preview, cmd_resume, cmd_status
+from handlers.admin import cmd_pause, cmd_post, cmd_preview, cmd_resume, cmd_status, cmd_test
 
 
 class FakeMessage:
@@ -47,6 +47,28 @@ async def test_ukrainian_alias_and_default_period(make_service, publisher):
     await cmd_preview(FakeMessage(), command("місяць"), service)
     await cmd_preview(FakeMessage(), command(None), service)
     assert [text.rsplit("\n", 1)[1] for text in publisher.previews] == ["#month", "#day"]
+
+
+async def test_test_sends_all_three_to_the_admin(make_service, publisher):
+    service = make_service()
+    message = FakeMessage()
+    await cmd_test(message, service)
+    assert [text.rsplit("\n", 1)[1] for text in publisher.previews] == ["#day", "#week", "#month"]
+    assert publisher.posts == []
+    assert message.answers[-1] == "✅ Тест завершено: усі 3 пости зібрано."
+    # Nothing is recorded: the schedule still posts today's top, all repositories still 🆕
+    assert await service.db.get_run("day:2026-10-30") is None
+    await service.run_due()
+    assert len(publisher.posts) == 1 and "🆕" in publisher.posts[0][0]
+
+
+async def test_test_reports_failures(make_service, publisher, github):
+    github.pages = {}
+    message = FakeMessage()
+    await cmd_test(message, make_service())
+    assert publisher.previews == []
+    assert sum("❌" in answer for answer in message.answers) == 3
+    assert message.answers[-1] == "⚠️ Тест завершено: зібрано 0 з 3, помилки вище."
 
 
 async def test_unknown_period(make_service, publisher):

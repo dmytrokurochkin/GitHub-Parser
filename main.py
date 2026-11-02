@@ -27,6 +27,7 @@ log = logging.getLogger("github-parser")
 COMMANDS = [
     BotCommand(command="status", description="Останні пости і наступні"),
     BotCommand(command="preview", description="Показати пост тут: day, week, month"),
+    BotCommand(command="test", description="Усі три пости сюди, не в канал"),
     BotCommand(command="post", description="Опублікувати зараз: day, week, month"),
     BotCommand(command="pause", description="Зупинити розклад"),
     BotCommand(command="resume", description="Відновити розклад"),
