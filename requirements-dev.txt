@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8
+pytest-asyncio>=0.24
+# Only assets/make_banners.py draws with it; the bot itself does not need it
+Pillow>=10
