@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: pytest and shellcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: pytest
+        run: python -m pytest -v
+      # $SUDO and $DOCKER are unquoted on purpose (empty or "sudo docker"),
+      # that is SC2086 at the info level, so only warnings and errors fail the job
+      - name: shellcheck
+        run: shellcheck -S warning deploy.sh
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker build
+        run: docker build -t github-parser-ci .
+      - name: Missing .env stops the bot with exit code 2
+        run: |
+          set +e
+          docker run --rm github-parser-ci
+          code=$?
+          test "$code" -eq 2

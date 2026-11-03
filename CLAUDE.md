@@ -5,7 +5,7 @@
 
 ## 1. Що це за проєкт
 
-Бот публікує в Telegram-канал топ-10 трендових репозиторіїв GitHub: за день (щодня), за тиждень (у неділю) і за місяць (1-го числа), о 06:00 за Варшавою, з хештегами `#day` / `#week` / `#month`. Відповідає лише власнику (`ADMIN_ID`). Працює в Docker на Debian-ноутбуці власника. Публічний репозиторій `dmytrokurochkin/GitHub-Parser`, секретів у ньому немає. Статус: перша версія, на реальному каналі ще не запускалась.
+Бот публікує в Telegram-канал топ-10 трендових репозиторіїв GitHub: за день (щодня), за тиждень (у неділю) і за місяць (1-го числа), о 06:00 за Варшавою, з хештегами `#day` / `#week` / `#month`. Відповідає лише власнику (`ADMIN_ID`). Працює в Docker на Debian-ноутбуці власника. Публічний репозиторій `dmytrokurochkin/GitHub-Parser`, секретів у ньому немає. Статус: працює на ноутбуці власника, публікує в канал [@GitHubMZTop](https://t.me/GitHubMZTop).
 
 Реклами й монетизації тут немає свідомо: рекламний бот буде окремим проєктом.
 
@@ -36,6 +36,8 @@ handlers/admin.py       # admin_router: /status /preview /test /post /pause /res
 assets/                 # day.png week.png month.png + make_banners.py (Pillow, лише для розробника)
 tests/                  # pytest; fixtures/ — справжні сторінки trending (обрізані)
 Dockerfile, docker-compose.yml, deploy.sh
+.github/workflows/tests.yml  # CI: pytest, shellcheck -S warning, docker build + вихід 2 без .env
+README.md, README.uk.md      # англійська (головна на GitHub) і українська, тримати однаковими за змістом
 ```
 
 ## 3. Конфігурація (.env)
@@ -98,7 +100,8 @@ Dockerfile, docker-compose.yml, deploy.sh
 
 ## 7. Правила
 
-- Нова логіка разом з тестом у `tests/`. Перед комітом: `python -m pytest` (усе має пройти). `bash -n deploy.sh`, і `shellcheck deploy.sh`, якщо він є.
+- Нова логіка разом з тестом у `tests/`. Перед комітом: `python -m pytest` (усе має пройти). `bash -n deploy.sh`, і `shellcheck -S warning deploy.sh`, якщо він є (CI запускає саме його). Після пушу перевірити, що CI зелений: `gh run list --limit 1`.
+- Нова команда чи налаштування: оновити обидва README (`README.md` і `README.uk.md`) і таблицю `.env` вище.
 - Сервісам потрібні лише методи `GitHubClient`/`Publisher`; тести підставляють `FakeGitHub`/`FakePublisher` з `tests/conftest.py`, час через `Clock`. Нових прихованих звернень до мережі в `DigestService` не додавати.
 - API aiogram перевіряти по встановленому пакету (`.venv/Lib/site-packages/aiogram`), а не з пам'яті.
 - Не запускати бота з реальним токеном і реальним каналом для перевірок. Для перевірки збирання посту є `/preview` (один період) і `/test` (усі три). Обидві команди лише будують пост через `build()` і нічого не записують у `runs`/`appearances`, тому розклад і позначки 🆕/🔁 в каналі вони не змінюють (описи LLM при цьому кешуються).
